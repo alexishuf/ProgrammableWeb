@@ -34,15 +34,18 @@ function readRows() {
 function fetchPage(url, callback) {
   url = 'http://www.programmableweb.com' + url;
   request(url, function (error, response, body) {
-    assert(!error, 'Error requesting ' + url + ': ' + error);
-    assert(response.statusCode === 200, 'Can not GET "' + url +'": ' + response.statusMessage);
+    if (error)
+      return callback(Error('Error requesting ' + url + ': ' + error));
+    if (response.statusCode === 200)
+      return callback(Error('Can not GET "' + url +'": ' + response.statusMessage));
     console.log(url);
-    callback(cheerio.load(body));
+    callback(null, cheerio.load(body));
   });
 }
 
 function directoryPage(url, links, callback) {
-  fetchPage(url, function ($) {
+  fetchPage(url, function (err, $) {
+    assert(!err, err);
     $('.col-md-3 a').each(function () {
       links.push($(this).attr('href'));
     });
@@ -60,7 +63,8 @@ function getLinks(callback) {
 }
 
 function apiPage(url, callback) {
-  fetchPage(url, function ($) {
+  fetchPage(url, function (err, $) {
+    if (err) return callback(err);
     var row = [url, $('.node-header h1').text()];
     //console.log($('.node-header h1').text());
     //console.log($('.api_description').text().trim());
@@ -74,15 +78,21 @@ function apiPage(url, callback) {
 }
 
 function run(db) {
+  var errors = [];
   getLinks(function (links) {
     async.forEachOfSeries(links, function (url, index, asyncCb) {
-      apiPage(url, function (row) {
+      apiPage(url, function (err, row) {
+        if (err) {
+          console.error(err);
+          return errors.push(err);
+        }
         updateRow(row[0], row[1]);
         asyncCb(null);
       });
     }, function () {
-      console.log('Finish');
       readRows(db);
+      console.log('Finish');
+      console.error(errors);
       db.close();
     });
   });
