@@ -73,7 +73,7 @@ function apiPage(url, callback) {
     //  console.log($(this).children('span').text());
     //});
     //console.log($('.followers-block .block-title span').text());
-    callback(row);
+    callback(null, row);
   });
 }
 
@@ -84,9 +84,10 @@ function run(db) {
       apiPage(url, function (err, row) {
         if (err) {
           console.error(err);
-          return errors.push(err);
+          errors.push(err);
         }
-        updateRow(row[0], row[1]);
+        else
+          updateRow(row[0], row[1]);
         asyncCb(null);
       });
     }, function () {
