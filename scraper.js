@@ -36,7 +36,7 @@ function fetchPage(url, callback) {
   request(url, function (error, response, body) {
     if (error)
       return callback(Error('Error requesting ' + url + ': ' + error));
-    if (response.statusCode === 200)
+    if (response.statusCode !== 200)
       return callback(Error('Can not GET "' + url +'": ' + response.statusMessage));
     console.log(url);
     callback(null, cheerio.load(body));
