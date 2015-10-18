@@ -24,7 +24,6 @@ var fields = [
   'Console_URL',
   'Contact_Email',
   'Developer_Support',
-  'Differentiators',
   'Other_options',
   'Primary_Category',
   'Protocol_Formats',
@@ -104,7 +103,10 @@ function apiPage(url, callback) {
     $('.specs .field').each(function () {
       var name = $(this).children('label').text();
       name = name.replace(/ \/ /, '_').replace(/ /, '_');
-      assert(fields.indexOf(name) !== -1, 'Unknown field: ' + name);
+      if (fields.indexOf(name) === -1) {
+        console.error('Unknown field: ' + name);
+        return;
+      }
       row['$'+ name] = $(this).children('span').text();
     });
     callback(null, row);
