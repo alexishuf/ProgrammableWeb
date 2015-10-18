@@ -10,19 +10,47 @@ var sqlite3 = require('sqlite3').verbose();
 var db = new sqlite3.Database('data.sqlite');
 
 var baseUrl = 'http://www.programmableweb.com';
+var fields = [
+  'url',
+  'title',
+  'description',
+  'followers',
+  'API_Endpoint',
+  'API_Forum',
+  'API_Homepage',
+  'API_Kits',
+  'API_Provider',
+  'Authentication_Mode',
+  'Console_URL',
+  'Contact_Email',
+  'Developer_Support',
+  'Other_options',
+  'Primary_Category',
+  'Protocol_Formats',
+  'Secondary_Categories',
+  'SSL_Support',
+  'Twitter_Url'
+];
 
 function initDatabase(callback) {
   // Set up sqlite database.
   db.serialize(function() {
-    db.run('CREATE TABLE IF NOT EXISTS apis (url TEXT, data TEXT, PRIMARY KEY(url))');
+    var listFields = fields.join(' TEXT, ') + ' TEXT';
+    db.run('CREATE TABLE IF NOT EXISTS apis (' + listFields + ', PRIMARY KEY(url))');
     callback(db);
   });
 }
 
-function updateRow(url, value) {
-  // Insert some data.
-  var statement = db.prepare('REPLACE INTO apis VALUES ($url, $data)');
-  statement.run({$url: url, $data: value});
+function updateRow(row) {
+  //Add missing fields
+  _.each(fields, function (name) {
+    name = '$' + name;
+    row[name] = row[name] || null;
+  });
+
+  var listFields = '$' + fields.join(', $');
+  var statement = db.prepare('REPLACE INTO apis VALUES ('+ listFields + ')');
+  statement.run(row);
   statement.finalize();
 }
 
@@ -52,22 +80,32 @@ function directoryPage(url, links, callback) {
 }
 
 function getLinks(callback) {
-  directoryPage('/apis/directory', [], function (links) {
+  directoryPage('/apis/directory?page=126', [], function (links) {
     callback(links);
   });
+}
+
+function getFollowers($) {
+  var str = $('.followers-block .block-title span').text()
+  return str.match(/Followers \((\d+)\)/)[1];
 }
 
 function apiPage(url, callback) {
   fetchPage(url, function (err, $) {
     if (err) return callback(err);
-    var row = [url, $('.node-header h1').text()];
-    //console.log($('.node-header h1').text());
-    //console.log($('.api_description').text().trim());
-    //$('.specs .field').each(function () {
-    //  console.log($(this).children('label').text());
-    //  console.log($(this).children('span').text());
-    //});
-    //console.log($('.followers-block .block-title span').text());
+    var row = {
+      $url: baseUrl + url,
+      $title: $('.node-header h1').text(),
+      $description: $('.api_description').text().trim(),
+      $followers: getFollowers($)
+    };
+
+    $('.specs .field').each(function () {
+      var name = $(this).children('label').text();
+      name = name.replace(/ \/ /, '_').replace(/ /, '_');
+      assert(fields.indexOf(name) !== -1, 'Unknown field: ' + name);
+      row['$'+ name] = $(this).children('span').text();
+    });
     callback(null, row);
   });
 }
@@ -82,7 +120,7 @@ function run(db) {
           errors.push(err);
         }
         else
-          updateRow(row[0], row[1]);
+          updateRow(row);
         asyncCb(null);
       });
     }, function () {
