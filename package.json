@@ -1,4 +1,5 @@
 {
+  "private": true,
   "dependencies": {
     "async": "^1.4.2",
     "cheerio": "latest",
