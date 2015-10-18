@@ -24,6 +24,7 @@ var fields = [
   'Console_URL',
   'Contact_Email',
   'Developer_Support',
+  'Differentiators',
   'Other_options',
   'Primary_Category',
   'Protocol_Formats',
