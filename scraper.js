@@ -9,6 +9,8 @@ var sqlite3 = require('sqlite3').verbose();
 
 var db = new sqlite3.Database('data.sqlite');
 
+var baseUrl = 'http://www.programmableweb.com';
+
 function initDatabase(callback) {
   // Set up sqlite database.
   db.serialize(function() {
@@ -25,7 +27,7 @@ function updateRow(url, value) {
 }
 
 function fetchPage(url, callback) {
-  url = 'http://www.programmableweb.com' + url;
+  url = baseUrl + url;
   request(url, function (error, response, body) {
     if (error)
       return callback(Error('Error requesting ' + url + ': ' + error));
