@@ -24,13 +24,6 @@ function updateRow(url, value) {
   statement.finalize();
 }
 
-function readRows() {
-  // Read some data.
-  db.each('SELECT url, data FROM apis', function(err, row) {
-    console.log(row.url + ': ' + row.data);
-  });
-}
-
 function fetchPage(url, callback) {
   url = 'http://www.programmableweb.com' + url;
   request(url, function (error, response, body) {
@@ -91,7 +84,6 @@ function run(db) {
         asyncCb(null);
       });
     }, function () {
-      readRows(db);
       console.log('Finish');
       console.error(errors);
       db.close();
