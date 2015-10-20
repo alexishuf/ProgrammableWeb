@@ -63,7 +63,7 @@ function fetchPage(url, callback) {
       return callback(Error('Can not GET "' + url +'": ' + response.statusMessage));
 
     var redirectURL = response.request.uri.href;
-    if (url === redirectURL)
+    if (url !== redirectURL)
       return callback(Error('Redirect from "' + url + '" to "' + redirectURL + '"'));
 
     console.log(url);
