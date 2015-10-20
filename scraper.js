@@ -61,6 +61,11 @@ function fetchPage(url, callback) {
       return callback(Error('Error requesting ' + url + ': ' + error));
     if (response.statusCode !== 200)
       return callback(Error('Can not GET "' + url +'": ' + response.statusMessage));
+
+    var redirectURL = response.request.uri.href;
+    if (url === redirectURL)
+      return callback(Error('Redirect from "' + url + '" to "' + redirectURL + '"'));
+
     console.log(url);
     callback(null, cheerio.load(body));
   });
