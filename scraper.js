@@ -85,7 +85,7 @@ function directoryPage(url, links, callback) {
 }
 
 function getLinks(callback) {
-  directoryPage('/apis/directory', [], function (links) {
+  directoryPage('/apis/directory?page=126', [], function (links) {
     callback(links);
   });
 }
