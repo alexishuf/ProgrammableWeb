@@ -74,7 +74,7 @@ function fetchPage(url, callback) {
 function directoryPage(url, links, callback) {
   fetchPage(url, function (err, $) {
     assert(!err, err);
-    $('.col-md-3 a').each(function () {
+    $('.views-field-title.col-md-3 a').each(function () {
       links.push($(this).attr('href'));
     });
     var next = $('.pager-last a').attr('href');
