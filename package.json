@@ -1,9 +1,9 @@
 {
   "private": true,
   "dependencies": {
-    "async": "^1.4.2",
+    "async": "^1.5.2",
     "cheerio": "latest",
-    "lodash": "^3.10.1",
+    "lodash": "^4.1.0",
     "request": "latest",
     "sqlite3": "latest"
   }
