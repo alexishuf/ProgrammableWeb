@@ -3,10 +3,11 @@
 var assert = require('assert');
 var _ = require('lodash');
 var cheerio = require('cheerio');
-var async = require('async');
 var sqlite3 = require('sqlite3').verbose();
+var Promise = require('bluebird');
 
-var makeRequest = require('makeRequest');
+//FIXME
+var makeRequest = Promise.promisify(require('makeRequest'), {multiArgs: true});
 
 var db = new sqlite3.Database('data.sqlite');
 
@@ -55,37 +56,30 @@ function updateRow(row) {
   statement.finalize();
 }
 
-function fetchPage(url, callback) {
+function fetchPage(url) {
   url = baseUrl + url;
-  makeRequest('get', url, function (error, response, body) {
-    if (error)
-      return callback(error);
-
+  return makeRequest('get', url).spread(function (response, body) {
     var redirectURL = response.request.uri.href;
     if (url !== redirectURL)
-      return callback(Error('Redirect from "' + url + '" to "' + redirectURL + '"'));
+      throw Error('Redirect from "' + url + '" to "' + redirectURL + '"');
 
-    callback(null, cheerio.load(body));
+    return cheerio.load(body);
   });
 }
 
-function directoryPage(url, links, callback) {
-  fetchPage(url, function (err, $) {
-    assert(!err, err);
-    $('.views-field-title.col-md-3 a').each(function () {
-      links.push($(this).attr('href'));
+function directoryPage(url, links) {
+  return fetchPage(url)
+    .then(function ($) {
+      $('.views-field-title.col-md-3 a').each(function () {
+        links.push($(this).attr('href'));
+      });
+      return $('.pager-last a').attr('href');
+    })
+    .then(function (next) {
+      if (next)
+        return directoryPage(next, links);
+      return links;
     });
-    var next = $('.pager-last a').attr('href');
-    if (next)
-      return directoryPage(next, links, callback);
-    callback(links);
-  });
-}
-
-function getLinks(callback) {
-  directoryPage('/apis/directory', [], function (links) {
-    callback(links);
-  });
 }
 
 function getFollowers($) {
@@ -93,9 +87,8 @@ function getFollowers($) {
   return str.match(/Followers \((\d+)\)/)[1];
 }
 
-function apiPage(url, callback) {
-  fetchPage(url, function (err, $) {
-    if (err) return callback(err);
+function apiPage(url) {
+  return fetchPage(url).then(function ($) {
     var row = {
       $url: baseUrl + url,
       $title: $('.node-header h1').text(),
@@ -112,24 +105,25 @@ function apiPage(url, callback) {
       }
       row['$'+ name] = $(this).children('span').text();
     });
-    callback(null, row);
+    return row;
   });
 }
 
 function run(db) {
   var errors = [];
-  getLinks(function (links) {
-    async.forEachOfSeries(links, function (url, index, asyncCb) {
-      apiPage(url, function (err, row) {
-        if (err) {
-          console.error(err);
-          errors.push(err);
-        }
-        else
-          updateRow(row);
-        asyncCb(null);
-      });
-    }, function () {
+  directoryPage('/apis/directory', [])
+    .then(function (links) {
+      Promise.mapSeries(links, function (url) {
+        return apiPage(url)
+          .catch(function (err) {
+            console.error(err);
+            errors.push(err);
+          })
+          .then(function (row) {
+            updateRow(row);
+          });
+    })
+    .then(function () {
       console.log('Finish');
       console.error(errors);
       db.close();

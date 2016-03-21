@@ -1,7 +1,7 @@
 {
   "private": true,
   "dependencies": {
-    "async": "^1.5.2",
+    "bluebird": "^3.3.4",
     "cheerio": "latest",
     "lodash": "^4.1.0",
     "makeRequest": "github:apis-guru/makeRequest",
