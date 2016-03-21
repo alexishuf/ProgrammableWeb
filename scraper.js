@@ -4,8 +4,9 @@ var assert = require('assert');
 var _ = require('lodash');
 var cheerio = require('cheerio');
 var async = require('async');
-var request = require('request');
 var sqlite3 = require('sqlite3').verbose();
+
+var makeRequest = require('makeRequest');
 
 var db = new sqlite3.Database('data.sqlite');
 
@@ -56,17 +57,14 @@ function updateRow(row) {
 
 function fetchPage(url, callback) {
   url = baseUrl + url;
-  request(url, function (error, response, body) {
+  makeRequest('get', url, function (error, response, body) {
     if (error)
-      return callback(Error('Error requesting ' + url + ': ' + error));
-    if (response.statusCode !== 200)
-      return callback(Error('Can not GET "' + url +'": ' + response.statusMessage));
+      return callback(error);
 
     var redirectURL = response.request.uri.href;
     if (url !== redirectURL)
       return callback(Error('Redirect from "' + url + '" to "' + redirectURL + '"'));
 
-    console.log(url);
     callback(null, cheerio.load(body));
   });
 }

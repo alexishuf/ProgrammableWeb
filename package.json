@@ -4,7 +4,7 @@
     "async": "^1.5.2",
     "cheerio": "latest",
     "lodash": "^4.1.0",
-    "request": "latest",
+    "makeRequest": "github:apis-guru/makeRequest",
     "sqlite3": "latest"
   }
 }
