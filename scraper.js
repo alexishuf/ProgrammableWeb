@@ -56,30 +56,42 @@ function updateRow(row) {
   statement.finalize();
 }
 
-function cloneStr(str) {
-  if (_.isString(str))
-    return (' ' + str).substr(1);
-  return str;
+//TODO: create NPM module
+function forceFreeMemory(fn) {
+  return function wrapper() {
+    //Convert result to strings, to drop all refences to leaky data.
+    var str = JSON.stringify(fn.apply(this, arguments));
+    //Be paranoid and modify string to force copy.
+    str = (' ' + str).substr(1);
+
+    if(typeof global.gc !== 'function')
+      throw Error('You should expose GC, run Node with "--expose-gc".');
+    global.gc();
+
+    return JSON.parse(str);
+  }
 }
 
-function fetchPage(url) {
+function fetchPage(url, parseFn) {
   url = baseUrl + url;
   //Forbid redirects, since ProgrammableWeb has duplicates and even loops.
-  return makeRequest('get', url, {followRedirect: false}).spread(function (response, body) {
-    return cheerio.load(body);
-  });
+  return makeRequest('get', url, {followRedirect: false})
+    .spread(forceFreeMemory(function (response, body) {
+      return parseFn(cheerio.load(body));
+    }));
 }
 
 function directoryPage(url, links) {
-  return fetchPage(url)
-    .then(function ($) {
-      $('.views-field-title.col-md-3 a').each(function () {
-        links.push(cloneStr($(this).attr('href')));
-      });
-      return cloneStr($('.pager-last a').attr('href'));
+  return fetchPage(url, function ($) {
+      return [
+        $('.views-field-title.col-md-3 a').map(function () {
+          return $(this).attr('href');
+        }).get(),
+        $('.pager-last a').attr('href')
+      ];
     })
-    .then(function (next) {
-      global.gc();
+    .spread(function (parsedLinks, next) {
+      Array.prototype.push.apply(links, parsedLinks);
       if (next) {
         return directoryPage(next, links);
       }
@@ -92,7 +104,7 @@ function getFollowers($) {
 }
 
 function apiPage(url) {
-  return fetchPage(url).then(function ($) {
+  return fetchPage(url, function ($) {
     var row = {
       $url: baseUrl + url,
       $title: $('.node-header h1').text(),
@@ -110,11 +122,8 @@ function apiPage(url) {
       row['$'+ name] = $(this).children('span').text();
     });
 
-    return _.mapValues(row, cloneStr);
-  }).then (function (row) {
-    global.gc();
     return row;
-  });
+  })
 }
 
 function run(db) {
