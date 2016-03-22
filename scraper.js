@@ -127,13 +127,13 @@ function run(db) {
     .then(function () {
       Promise.mapSeries(links, function (url) {
         return apiPage(url)
+          .then(function (row) {
+            updateRow(row);
+          });
           .catch(function (err) {
             console.error(err);
             errors.push(err);
           })
-          .then(function (row) {
-            updateRow(row);
-          });
     })
     .then(function () {
       console.log('Finish');
