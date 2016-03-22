@@ -64,7 +64,8 @@ function cloneStr(str) {
 
 function fetchPage(url) {
   url = baseUrl + url;
-  return makeRequest('get', url).spread(function (response, body) {
+  //Forbid redirects, since ProgrammableWeb has duplicates and even loops.
+  return makeRequest('get', url, {followRedirect: false}).spread(function (response, body) {
     var redirectURL = response.request.uri.href;
     if (url !== redirectURL)
       throw Error('Redirect from "' + url + '" to "' + redirectURL + '"');
