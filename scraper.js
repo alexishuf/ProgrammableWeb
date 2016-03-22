@@ -56,6 +56,12 @@ function updateRow(row) {
   statement.finalize();
 }
 
+function cloneStr(str) {
+  if (_.isString(str))
+    return (' ' + str).substr(1);
+  return str;
+}
+
 function fetchPage(url) {
   url = baseUrl + url;
   return makeRequest('get', url).spread(function (response, body) {
@@ -71,14 +77,15 @@ function directoryPage(url, links) {
   return fetchPage(url)
     .then(function ($) {
       $('.views-field-title.col-md-3 a').each(function () {
-        links.push($(this).attr('href'));
+        links.push(cloneStr($(this).attr('href')));
       });
-      return $('.pager-last a').attr('href');
+      return cloneStr($('.pager-last a').attr('href'));
     })
     .then(function (next) {
-      if (next)
+      global.gc();
+      if (next) {
         return directoryPage(next, links);
-      return links;
+      }
     });
 }
 
@@ -105,14 +112,19 @@ function apiPage(url) {
       }
       row['$'+ name] = $(this).children('span').text();
     });
+
+    return _.mapValues(row, cloneStr);
+  }).then (function (row) {
+    global.gc();
     return row;
   });
 }
 
 function run(db) {
   var errors = [];
-  directoryPage('/apis/directory', [])
-    .then(function (links) {
+  var links = [];
+  directoryPage('/apis/directory', links)
+    .then(function () {
       Promise.mapSeries(links, function (url) {
         return apiPage(url)
           .catch(function (err) {
