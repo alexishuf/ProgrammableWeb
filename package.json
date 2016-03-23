@@ -3,6 +3,7 @@
   "dependencies": {
     "bluebird": "^3.3.4",
     "cheerio": "latest",
+    "gc-hacks": "^1.0.3",
     "lodash": "^4.1.0",
     "makeRequest": "github:apis-guru/makeRequest",
     "sqlite3": "latest"

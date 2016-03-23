@@ -5,6 +5,7 @@ var _ = require('lodash');
 var cheerio = require('cheerio');
 var sqlite3 = require('sqlite3').verbose();
 var Promise = require('bluebird');
+var gcHacks = require('gc-hacks');
 
 //FIXME
 var makeRequest = Promise.promisify(require('makeRequest'), {multiArgs: true});
@@ -56,27 +57,11 @@ function updateRow(row) {
   statement.finalize();
 }
 
-//TODO: create NPM module
-function forceFreeMemory(fn) {
-  return function wrapper() {
-    //Convert result to strings, to drop all refences to leaky data.
-    var str = JSON.stringify(fn.apply(this, arguments));
-    //Be paranoid and modify string to force copy.
-    str = (' ' + str).substr(1);
-
-    if(typeof global.gc !== 'function')
-      throw Error('You should expose GC, run Node with "--expose-gc".');
-    global.gc();
-
-    return JSON.parse(str);
-  }
-}
-
 function fetchPage(url, parseFn) {
   url = baseUrl + url;
   //Forbid redirects, since ProgrammableWeb has duplicates and even loops.
   return makeRequest('get', url, {followRedirect: false})
-    .spread(forceFreeMemory(function (response, body) {
+    .spread(gcHacks.recreateReturnObjectAndGcCollect(function (response, body) {
       return parseFn(cheerio.load(body));
     }));
 }
