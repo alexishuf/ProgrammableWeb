@@ -1,14 +1,14 @@
-// This is a template for a Node.js scraper on morph.io (https://morph.io)
+'use strict';
 
 var assert = require('assert');
+
 var _ = require('lodash');
 var cheerio = require('cheerio');
 var sqlite3 = require('sqlite3').verbose();
 var Promise = require('bluebird');
-var gcHacks = require('gc-hacks');
 
-//FIXME
-var makeRequest = Promise.promisify(require('makeRequest'), {multiArgs: true});
+var gcHacks = require('gc-hacks');
+var makeRequest = require('makeRequest');
 
 var db = new sqlite3.Database('data.sqlite');
 
