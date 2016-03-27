@@ -130,7 +130,8 @@ function run(db) {
       console.log('Finish');
       console.error(errors);
       db.close();
-    });
+    })
+    .done();
   });
 }
 
