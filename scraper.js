@@ -66,21 +66,27 @@ function fetchPage(url, parseFn) {
     }));
 }
 
-function directoryPage(url, links) {
-  return fetchPage(url, function ($) {
-      return [
-        $('.views-field-title.col-md-3 a').map(function () {
-          return $(this).attr('href');
-        }).get(),
-        $('.pager-last a').attr('href')
-      ];
-    })
-    .spread(function (parsedLinks, next) {
-      Array.prototype.push.apply(links, parsedLinks);
-      if (next) {
-        return directoryPage(next, links);
-      }
-    });
+function scrapeDirectoryPages() {
+  return Promise.coroutine(function* () {
+     var next = '/apis/directory'
+     var links = [];
+
+     while (next) {
+       var result = yield fetchPage(next, function ($) {
+         return [
+           $('.views-field-title.col-md-3 a').map(function () {
+             return $(this).attr('href');
+           }).get(),
+           $('.pager-last a').attr('href')
+         ];
+       });
+
+       Array.prototype.push.apply(links, result[0]);
+       next = result[1];
+     }
+
+     return links;
+  })();
 }
 
 function getFollowers($) {
@@ -88,7 +94,7 @@ function getFollowers($) {
   return str.match(/Followers \((\d+)\)/)[1];
 }
 
-function apiPage(url) {
+function scrapeApiPage(url) {
   return fetchPage(url, function ($) {
     var row = {
       $url: baseUrl + url,
@@ -113,18 +119,16 @@ function apiPage(url) {
 
 function run(db) {
   var errors = [];
-  var links = [];
-  directoryPage('/apis/directory', links)
-    .then(function () {
-      Promise.mapSeries(links, function (url) {
-        return apiPage(url)
-          .then(function (row) {
-            updateRow(row);
-          })
-          .catch(function (err) {
-            console.error(err);
-            errors.push(err);
-          });
+  scrapeDirectoryPages()
+    .mapSeries(function (url) {
+      return scrapeApiPage(url)
+        .then(function (row) {
+          updateRow(row);
+        })
+        .catch(function (err) {
+          console.error(err);
+          errors.push(err);
+        });
     })
     .then(function () {
       console.log('Finish');
@@ -132,7 +136,6 @@ function run(db) {
       db.close();
     })
     .done();
-  });
 }
 
 initDatabase(run);
