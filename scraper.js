@@ -13,11 +13,9 @@ var makeRequest = require('makeRequest');
 var db = new sqlite3.Database('data.sqlite');
 
 var baseUrl = 'http://www.programmableweb.com';
-var fields = [
-  'url',
-  'title',
-  'description',
-  'followers',
+
+// fields extracted .from field divs
+var dynamicFields = [
   'API_Endpoint',
   'API_Forum',
   'API_Homepage',
@@ -32,8 +30,41 @@ var fields = [
   'Protocol_Formats',
   'Secondary_Categories',
   'SSL_Support',
-  'Twitter_Url'
+  'Twitter_Url',
+  'Docs_Homepage_URL',
+  'API_Design_Description_Non_Proprietary',
+  'Terms_Service_URL',
+  'Authentication_Model',
+  'Scope',
+  'Device_Specific',
+  'Supported_Request_Formats',
+  'Unofficial_API',
+  'Hypermedia_API',
+  'Restricted_Access',
+  'Support_Email_Address',
+  'How_API_different',
+  'Version',
+  'Type',
+  'Architectural_Style',
+  'Supported_Response_Formats',
+  'API_related_anyother_API'
 ];
+
+var fields = [
+  'url',
+  'title',
+  'description',
+  'followers'
+].concat(dynamicFields);
+
+
+var fieldsRegExps = _.map(dynamicFields, function (field) {
+  var rx = new RegExp('^(?:.*_)?' + _.reduce(field.split('_'), function (rx, term) {
+    return rx + '(?:_.*_|_)' + term;
+  }) + '(?:_.*)?$', 'i');
+
+  return {rx: rx, field: field};
+});
 
 function initDatabase(callback) {
   // Set up sqlite database.
@@ -94,6 +125,33 @@ function getFollowers($) {
   return str.match(/Followers \((\d+)\)/)[1];
 }
 
+function preprocessLabel(label) {
+  var old = null;
+  while (old !== label) {
+    old = label;
+    _([ ['/', '_'], ['-', '_'], ['+', '_'], [/ +/, '_'], [/__+/, '_'],
+        ['Home_Page', 'Homepage'],
+        [/[ _](is|this|the|an?|for|in|on)[ _]/i, ' '],
+        [/^(is|this|the|an?|for|in|on)[ _]/i, ' '],
+        [/[.;,?]+/, ''], [/[ _]$/, ''], [/^[ _]/, ''] ])
+      .each(function (args) {
+        var tmp = label;
+        label = label.replace(args[0], args[1]);
+      });
+  }
+  return label;
+}
+
+
+function chooseField(label) {
+  label = preprocessLabel(label);
+  var longestMatch = _.maxBy(
+      _.filter(fieldsRegExps, function (obj) { return obj.rx.test(label); }),
+      function (obj) {return obj.field.length;}
+  );
+  return longestMatch == undefined ? label : longestMatch.field;
+}
+
 function scrapeApiPage(url) {
   return fetchPage(url, function ($) {
     var row = {
@@ -105,7 +163,7 @@ function scrapeApiPage(url) {
 
     $('.specs .field').each(function () {
       var name = $(this).children('label').text();
-      name = name.replace(/ \/ /, '_').replace(/ /, '_');
+      name = chooseField(name);
       if (fields.indexOf(name) === -1) {
         console.error('Unknown field: ' + name);
         return;
