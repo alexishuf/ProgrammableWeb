@@ -32,8 +32,53 @@ var fields = [
   'Protocol_Formats',
   'Secondary_Categories',
   'SSL_Support',
-  'Twitter_Url'
+  'Twitter_Url',
+  /* fields added on 2016-08-12: */
+  'Terms_Of_Service_URL',
+  'Scope',
+  'Device_Specific',
+  'Docs_Homepage_URL',
+  'Supported_Request_Formats',
+  'Version',
+  'Type',
+  'Architectural_Style',
+  'Supported_Response_Formats',
+  'API_Design_Description_Non_Proprietary',
+  'Unofficial_API',
+  'Hypermedia_API',
+  'Restricted_Access',
+  'How_API_different',
+  'Related_APIs',
+  'Description_File_URL',
+  'Description_File_Type',
+  'Developer_Homepage'
 ];
+
+var labelToField = {
+  /* mappings to the fields array (2016-08-12) */
+  'Twitter_URL' : 'Twitter_Url',
+  'API_Portal_/_Home_Page': 'API_Homepage',
+  'API_Forum_/_Message_Boards': 'API_Forum',
+  'Authentication_Model': 'Authentication_Mode',
+  'Interactive_Console_URL': 'Console_URL',
+  'Docs_Home_Page_URL': 'Docs_Homepage_URL',
+  'Developer_Home_Page': 'Developer_Homepage',
+  'Is_the_API_Design/Description_Non-Proprietary_?': 'API_Design_Description_Non_Proprietary',
+  'Is_This_an_Unofficial_API?': 'Unofficial_API',
+  'Is_This_a_Hypermedia_API?': 'Hypermedia_API',
+  'Restricted_Access_(_Requires_Provider_Approval_)': 'Restricted_Access',
+  'Support_Email_Address': 'Contact_Email',
+  'Developer_Support_URL': 'Developer_Support',
+  'How_is_this_API_different_?': 'How_API_different',
+  'Is_the_API_related_to_anyother_API_?' : 'Related_APIs',
+  'Description_File_URL_(if_public)' : 'Description_File_URL'
+};
+
+function chooseField(label) {
+    label = label.trim().replace(/ /g, '_');
+    return fields.indexOf(label) >= 0 ? label : labelToField[label];
+}
+
 
 function initDatabase(callback) {
   // Set up sqlite database.
@@ -104,10 +149,10 @@ function scrapeApiPage(url) {
     };
 
     $('.specs .field').each(function () {
-      var name = $(this).children('label').text();
-      name = name.replace(/ \/ /, '_').replace(/ /, '_');
-      if (fields.indexOf(name) === -1) {
-        console.error('Unknown field: ' + name);
+      var label = $(this).children('label').text();
+      var name = chooseField(label);
+      if (name === undefined) {
+        console.error('Unknown field: ' + label);
         return;
       }
       row['$'+ name] = $(this).children('span').text();
